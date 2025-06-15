@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Передбачення віку</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #eaeef3;
+            text-align: center;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1 {
+            font-size: 26px;
+            margin-bottom: 20px;
+            color: #222;
+        }
+
+        .block {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px auto;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="file"] {
+            display: block;
+            margin: 10px auto;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px 10px 0 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        button:hover {
+            background-color: #357abd;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-top: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error {
+            color: #d93025;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .result {
+            color: #1a73e8;
+            font-weight: bold;
+            margin-top: 12px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Передбачення віку</h1>
+
+<div class="block">
+    <input type="file" id="fileInput" accept="image/*" onchange="uploadImage()">
+    <div id="imageBlock" class="hidden">
+        <img id="preview" src="">
+    </div>
+</div>
+
+<div class="block hidden" id="buttonsBlock">
+    <p>Оберіть тип передбачення:</p>
+    <button onclick="predict('classification')">Вікові групи</button>
+    <button onclick="predict('regression')">Точний вік</button>
+</div>
+
+<div id="error" class="error hidden"></div>
+<div id="result" class="result hidden"></div>
+
+<script>
+    function uploadImage() {
+        const input = document.getElementById('fileInput');
+        const file = input.files[0];
+
+        if (!file) {
+            showError('Оберіть зображення.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            document.getElementById('preview').src = e.target.result;
+            document.getElementById('imageBlock').classList.remove('hidden');
+            document.getElementById('buttonsBlock').classList.remove('hidden');
+            clearMessages();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    async function predict(type) {
+        const file = document.getElementById('fileInput').files[0];
+
+        if (!file) {
+            showError('Зображення не завантажено.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('model_type', type);
+
+        try {
+            const response = await fetch('/predict', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                showError(data.error || 'Сталася помилка при передбаченні.');
+                return;
+            }
+
+            document.getElementById('result').textContent = data.result_text;
+            document.getElementById('result').classList.remove('hidden');
+            document.getElementById('error').classList.add('hidden');
+        } catch (error) {
+            showError('Помилка з’єднання з сервером.');
+            console.error('Fetch error:', error);
+        }
+    }
+
+    function showError(msg) {
+        const error = document.getElementById('error');
+        error.textContent = msg;
+        error.classList.remove('hidden');
+        document.getElementById('result').classList.add('hidden');
+    }
+
+    function clearMessages() {
+        document.getElementById('error').classList.add('hidden');
+        document.getElementById('result').classList.add('hidden');
+    }
+</script>
+
+</body>
+</html>
